@@ -2,10 +2,13 @@ export { }; // Required to override fetch
 
 import { AzureManager } from "./controllers/AzureManager";
 import { throwFatalError } from "./utils/display";
-import { GitManager } from "./controllers/GitManager";
+
+process.on('SIGINT', function () {
+    console.log('\nI caught SIGINT signal.');
+    process.exit();
+});
 
 main()
-
 
 async function main() {
 
@@ -31,6 +34,7 @@ async function main() {
             break
         case CommandType.edit:
             await azureManager.editProject()
+            await azureManager.setupPolicies(['master', 'develop'])
             break
     }
 

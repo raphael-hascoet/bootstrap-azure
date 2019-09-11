@@ -1,12 +1,15 @@
 const git = require('isomorphic-git');
-const fs = require('fs-extra');
+const fs = require('fs');
 git.plugins.set('fs', fs)
+const fse = require('fs-extra')
+const path = require('path')
 const tmp = require('tmp-promise')
 
 const gitDir = '/tmp-git/'
 
-const sampleFolder = __dirname + "/../../sample-files/"
-
+const sampleFolder = path.join(process.cwd(), "/sample-files/")
+console.log(process.cwd())
+console.log(sampleFolder)
 export class GitManager {
 
     private username: string
@@ -39,17 +42,46 @@ export class GitManager {
         console.log("The repository was cloned.")
     }
 
-    async addReadme() {
-        await fs.copyFile(
-            sampleFolder + 'README.md',
-            this.tmpGitDir + 'README.md',
+    async addFromSamples(fileName: string) {
+        await fse.copyFile(
+            sampleFolder + fileName,
+            this.tmpGitDir + fileName,
         )
 
-        await this.add('README.md')
+        await this.add(fileName)
 
-        await this.commit('Added README')
+        await this.commit('Added ' + fileName)
 
-        console.log("Sample README.md added")
+        console.log("Sample " + fileName + " added")
+    }
+
+    async createBranch(name: string) {
+
+        const branchExistsOnRemote = await this.branchExistsOnRemote(name)
+
+        if (branchExistsOnRemote) {
+            console.log("The branch " + name + " already exists on the remote")
+            return
+        }
+
+        await git.branch({
+            dir: this.tmpGitDir,
+            ref: name,
+            checkout: true
+        })
+
+        console.log('Created ' + name + ' branch')
+
+        await this.commit('Created ' + name + ' branch')
+
+        await this.push(name)
+
+    }
+
+    private async branchExistsOnRemote(name: string): Promise<boolean> {
+        const remoteBranches: Array<string> = await git.listBranches({ dir: this.tmpGitDir, remote: 'origin' })
+
+        return remoteBranches.includes(name)
     }
 
     async add(filePath: string) {
@@ -74,11 +106,11 @@ export class GitManager {
         console.log("Commited with the message \"" + message + "\"")
     }
 
-    async push() {
+    async push(ref: string) {
         await git.push({
             dir: this.tmpGitDir,
             remote: 'origin',
-            ref: 'master',
+            ref: ref,
             username: this.username,
             password: this.password,
             noGitSuffix: true

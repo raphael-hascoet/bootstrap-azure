@@ -9,11 +9,13 @@ export class AzureManager {
 
     private azureApi: AzureApi;
 
+    private gitManager: GitManager;
+
     private project?: Project;
 
-    private constructor(azureApi?: AzureApi) {
-        if (typeof azureApi === 'undefined') throwFatalError("Error: Azure Api is undefined")
-        this.azureApi = azureApi as AzureApi
+    private constructor(azureApi: AzureApi, gitManager: GitManager) {
+        this.azureApi = azureApi
+        this.gitManager = gitManager
     }
 
     static async createManager(): Promise<AzureManager> {
@@ -28,7 +30,17 @@ export class AzureManager {
         console.log("You successfully logged in !")
         console.log()
 
-        return new AzureManager(azureApi)
+        let gitManager = undefined
+
+        if (!!azureApi) {
+
+            const loginInfos = azureApi.getLoginInfos()
+
+            gitManager = await GitManager.createGitManager(loginInfos.username, loginInfos.token)
+
+        }
+
+        return new AzureManager(azureApi as AzureApi, gitManager as GitManager)
     }
 
     private static async createAzureApi(): Promise<AzureApi> {
@@ -56,6 +68,8 @@ export class AzureManager {
 
         const project = new Project(projectName, projectDescription)
 
+        console.log("Creating the project, please wait...")
+
         try {
             await this.azureApi.createProject(project)
         } catch (err) {
@@ -71,18 +85,44 @@ export class AzureManager {
     async initRepo() {
         console.log("Initializing the project's repository :")
 
-        const loginInfos = this.azureApi.getLoginInfos()
+        await this.cloneRepo()
 
-        const gitManager = await GitManager.createGitManager(loginInfos.username, loginInfos.token)
+        await this.gitManager.commit('Initial commit')
 
+        if (YNquestion('Add a sample README ?')) {
+            await this.gitManager.addFromSamples('README.md')
+        }
+
+        if (YNquestion('Add a sample .gitignore ?')) {
+            await this.gitManager.addFromSamples('.gitignore')
+        }
+
+        const createdBranches: Array<string> = []
+
+        await this.gitManager.push('master')
+
+        createdBranches.push('master')
+
+        if (YNquestion('Create a develop branch ?')) {
+            await this.gitManager.createBranch('develop')
+            createdBranches.push('develop')
+
+            if (YNquestion('Should develop be the default branch ?')) {
+                await this.azureApi.setDefaultBranch(this.project as Project, 'develop')
+                console.log("develop is now the default branch")
+            }
+
+        }
+
+        if (YNquestion('Add policies to the created branches ?')) {
+            this.setupPolicies(createdBranches)
+        }
+    }
+
+    private async cloneRepo() {
         const repositoryUrl = await this.azureApi.getRepositoryUrl(this.project as Project)
 
-        await gitManager.cloneRepo(repositoryUrl)
-
-        if (YNquestion('Add a sample README ?'))
-            await gitManager.addReadme()
-
-        await gitManager.push()
+        await this.gitManager.cloneRepo(repositoryUrl)
     }
 
     async editProject() {
@@ -97,15 +137,32 @@ export class AzureManager {
 
         console.log()
 
-        const projectName = question('Project you want to edit: ')
+        const projectName = question('Project you want to edit: ', 'ouioui')
 
         if (existingProjectsNames.includes(projectName)) {
             this.project = existingProjects.find((project) => project.name === projectName)
+
+            await this.cloneRepo()
         } else {
             throwError('This project does not exist')
             console.log()
-            this.editProject()
+            await this.editProject()
         }
+    }
+
+    async setupPolicies(createdBranches: Array<string>) {
+
+        if (YNquestion('Check for linked work items on pull requests ?')) {
+            for (const branch of createdBranches)
+                this.azureApi.createPolicy(this.project as Project, true, true, 'work-items', branch)
+        }
+
+        if (YNquestion('Check for comments resolution on pull requests ?')) {
+            for (const branch of createdBranches)
+                this.azureApi.createPolicy(this.project as Project, true, true, 'active-comments', branch)
+        }
+
+
     }
 
 
