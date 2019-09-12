@@ -23,3 +23,6 @@ export function YNquestion(question: string): boolean {
     return readlineSync.keyInYNStrict(question)
 }
 
+export function selectQuestion(question: string, answers: Array<string>): number {
+    return readlineSync.keyInSelect(answers, question, { cancel: false })
+}

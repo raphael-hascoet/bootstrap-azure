@@ -1,9 +1,11 @@
-import { GitManager } from './GitManager';
 import { AzureApi } from "../models/AzureApi";
 import { AzureLoginInfos, IAzureLoginInfos } from "../models/data/AzureLoginInfos";
 import { Project } from "../models/data/Project";
 import getDefaultLoginsFromFile from "../utils/azureLoginFile";
-import { question, throwFatalError, displayList, throwError, YNquestion } from "../utils/display";
+import { displayList, question, throwError, throwFatalError, YNquestion, selectQuestion } from "../utils/display";
+import { Preset } from '../models/data/Preset';
+import { GitManager } from './GitManager';
+import { copyFromSamples } from "../utils/samples";
 
 export class AzureManager {
 
@@ -12,6 +14,8 @@ export class AzureManager {
     private gitManager: GitManager;
 
     private project?: Project;
+
+    private preset: Preset = Preset.none;
 
     private constructor(azureApi: AzureApi, gitManager: GitManager) {
         this.azureApi = azureApi
@@ -80,6 +84,7 @@ export class AzureManager {
         this.project = project
 
         console.log("Successfully created the project " + projectName)
+        console.log()
     }
 
     async initRepo() {
@@ -89,19 +94,30 @@ export class AzureManager {
 
         await this.gitManager.commit('Initial commit')
 
-        if (YNquestion('Add a sample README ?')) {
-            await this.gitManager.addFromSamples('README.md')
-        }
-
-        if (YNquestion('Add a sample .gitignore ?')) {
-            await this.gitManager.addFromSamples('.gitignore')
-        }
 
         const createdBranches: Array<string> = []
 
         await this.gitManager.push('master')
 
         createdBranches.push('master')
+
+        const presetIndex = selectQuestion("Which preset do you want to use ?", Object.values(Preset))
+
+        this.preset = (<any>Preset)[Object.keys(Preset)[presetIndex]]
+
+        console.log()
+
+        if (YNquestion('Add a sample README ?')) {
+            await this.addSampleFile('README.md')
+        }
+
+        console.log()
+
+        if (YNquestion('Add a sample .gitignore ?')) {
+            await this.addSampleFile('.gitignore')
+        }
+
+        console.log()
 
         if (YNquestion('Create a develop branch ?')) {
             await this.gitManager.createBranch('develop')
@@ -111,8 +127,9 @@ export class AzureManager {
                 await this.azureApi.setDefaultBranch(this.project as Project, 'develop')
                 console.log("develop is now the default branch")
             }
-
         }
+
+        console.log()
 
         if (YNquestion('Add policies to the created branches ?')) {
             this.setupPolicies(createdBranches)
@@ -123,6 +140,13 @@ export class AzureManager {
         const repositoryUrl = await this.azureApi.getRepositoryUrl(this.project as Project)
 
         await this.gitManager.cloneRepo(repositoryUrl)
+    }
+
+    private async addSampleFile(fileName: string) {
+        await copyFromSamples(fileName, this.gitManager.getTmpGitDir(), this.preset)
+        await this.gitManager.add(fileName)
+        await this.gitManager.commit('Added sample ' + fileName)
+        await this.gitManager.push()
     }
 
     async editProject() {

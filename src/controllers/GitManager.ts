@@ -1,15 +1,10 @@
 const git = require('isomorphic-git');
 const fs = require('fs');
 git.plugins.set('fs', fs)
-const fse = require('fs-extra')
-const path = require('path')
 const tmp = require('tmp-promise')
 
 const gitDir = '/tmp-git/'
 
-const sampleFolder = path.join(process.cwd(), "/sample-files/")
-console.log(process.cwd())
-console.log(sampleFolder)
 export class GitManager {
 
     private username: string
@@ -40,19 +35,6 @@ export class GitManager {
         )
 
         console.log("The repository was cloned.")
-    }
-
-    async addFromSamples(fileName: string) {
-        await fse.copyFile(
-            sampleFolder + fileName,
-            this.tmpGitDir + fileName,
-        )
-
-        await this.add(fileName)
-
-        await this.commit('Added ' + fileName)
-
-        console.log("Sample " + fileName + " added")
     }
 
     async createBranch(name: string) {
@@ -106,17 +88,27 @@ export class GitManager {
         console.log("Commited with the message \"" + message + "\"")
     }
 
-    async push(ref: string) {
+    async push(ref?: string) {
         await git.push({
             dir: this.tmpGitDir,
             remote: 'origin',
-            ref: ref,
+            ref: !!ref ? ref : await this.getCurrentBranch(),
             username: this.username,
             password: this.password,
             noGitSuffix: true
         })
 
         console.log("Pushed to the repository")
+    }
+
+    async getCurrentBranch(): Promise<string> {
+        return await git.currentBranch({
+            dir: this.tmpGitDir
+        })
+    }
+
+    getTmpGitDir(): string {
+        return this.tmpGitDir
     }
 
 }
