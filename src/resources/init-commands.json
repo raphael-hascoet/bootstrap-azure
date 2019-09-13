@@ -1,5 +1,5 @@
 {
     "node": [
-        "npm init"
+        "npm init -y"
     ]
 }

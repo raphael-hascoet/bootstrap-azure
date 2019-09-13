@@ -1,8 +1,9 @@
+import { AzureManager } from "./controllers/AzureManager";
+import { Preset } from './models/data/Preset';
+import { throwFatalError } from "./utils/display";
+import { presetHasInitCommands } from "./utils/project-init";
 export { }; // Required to override fetch
 
-import { AzureManager } from "./controllers/AzureManager";
-import { throwFatalError, selectMultipleQuestion } from "./utils/display";
-import { getCompiledTemplate } from "./utils/templates";
 
 process.on('SIGINT', function () {
     console.log('\nI caught SIGINT signal.');

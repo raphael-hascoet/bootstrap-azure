@@ -7,6 +7,7 @@ import { displayList, question, selectQuestion, throwError, throwFatalError, YNq
 import { copyFromSamples } from "../utils/samples";
 import { GitManager } from './GitManager';
 import { PipelineManager } from './PipelineManager';
+import { presetHasInitCommands, initializeProject } from "../utils/project-init";
 
 export class AzureManager {
 
@@ -132,6 +133,23 @@ export class AzureManager {
             }
         }
 
+        console.log()
+
+        if (presetHasInitCommands(this.preset)) {
+            if (YNquestion('Do you want to initialize a basic project ?')) {
+                const filesToAdd = await initializeProject(this.gitManager.getTmpGitDir(), this.preset)
+
+                for (const file of filesToAdd) {
+                    this.gitManager.add(file)
+                }
+
+                await this.gitManager.commit('Initialized a basic project')
+                await this.gitManager.push()
+            }
+        }
+
+        console.log()
+
         if (YNquestion('Do you want to setup a Continuous Integration pipeline ?')) {
             await this.setupIntegrationPipeline()
         }
@@ -158,7 +176,7 @@ export class AzureManager {
 
         await compiledPipeline.writeFilesInDestination(this.gitManager.getTmpGitDir())
 
-        for(const path of compiledPipeline.getFilePaths()) {
+        for (const path of compiledPipeline.getFilePaths()) {
             await this.gitManager.add(path)
         }
 

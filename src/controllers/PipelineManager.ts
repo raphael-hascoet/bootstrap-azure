@@ -48,8 +48,6 @@ export class PipelineManager {
             compiledFiles.set(`azure/templates/${templateName}.yml`, await getTemplateFileContent(templateName, undefined, this.preset))
         }
 
-        console.log(compiledFiles)
-
         return new CompiledPipeline(compiledFiles)
 
     }

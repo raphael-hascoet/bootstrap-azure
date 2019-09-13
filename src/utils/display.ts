@@ -59,7 +59,6 @@ export function selectMultipleQuestion(question: string, answers: Array<string>)
         else { selected[parseInt(key) - 1] = !selected[parseInt(key) - 1] }
     }
 
-    console.log(selected)
     return selected
 
 }

@@ -1,6 +1,5 @@
 import { IAzureLoginInfos } from '../models/data/AzureLoginInfos';
-const fs = require('fs');
-const fsPromises = fs.promises;
+const fs = require('fs-extra');
 
 import { AzureLoginInfos } from "../models/data/AzureLoginInfos";
 
@@ -10,7 +9,7 @@ export default async function getDefaultLoginsFromFile(): Promise<AzureLoginInfo
     let loginsFileData = null
 
     try {
-        loginsFileData = await fsPromises.readFile('./azure-logins.json')
+        loginsFileData = await fs.readFile('./azure-logins.json')
     } catch (err) {
         if (err.code = 'ENOENT') {
             console.log("The azure-logins.json file does not exist. No defaults set.")
