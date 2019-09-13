@@ -1,3 +1,4 @@
+import { GitManager } from './../controllers/GitManager';
 import { Preset, getPresetKey } from './../models/data/Preset';
 const path = require('path')
 const fs = require('fs-extra')
@@ -32,3 +33,6 @@ export async function copyFromSamples(fileName: string, destination: string, pre
     )
 }
 
+export async function getSampleContent(fileName: string): Promise<string> {
+    return await fs.readFile(await getSamplePath(fileName), 'utf-8')
+}

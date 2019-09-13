@@ -1,9 +1,8 @@
 export { }; // Required to override fetch
 
 import { AzureManager } from "./controllers/AzureManager";
-import { throwFatalError, question, selectQuestion } from "./utils/display";
-import { Preset, getPresetKey } from "./models/data/Preset";
-import { getSamplePath } from "./utils/samples";
+import { throwFatalError, selectMultipleQuestion } from "./utils/display";
+import { getCompiledTemplate } from "./utils/templates";
 
 process.on('SIGINT', function () {
     console.log('\nI caught SIGINT signal.');
@@ -36,7 +35,7 @@ async function main() {
             break
         case CommandType.edit:
             await azureManager.editProject()
-            await azureManager.setupPolicies(['master', 'develop'])
+            await azureManager.setupIntegrationPipeline()
             break
     }
 

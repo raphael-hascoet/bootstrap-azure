@@ -26,3 +26,41 @@ export function YNquestion(question: string): boolean {
 export function selectQuestion(question: string, answers: Array<string>): number {
     return readlineSync.keyInSelect(answers, question, { cancel: false })
 }
+
+export function selectMultipleQuestion(question: string, answers: Array<string>): Array<boolean> {
+
+    const keyLimit = `$<1-${answers.length}> `
+
+    let selected: Array<boolean> = answers.map(() => false)
+
+    console.log(question + "\n")
+
+    for (let i = 0; i <= answers.length + 1; i++)
+        console.log()
+
+    while (true) {
+        let returns = ""
+        for (let i = 0; i <= answers.length + 1; i++)
+            returns += '\x1B[1A'
+
+        let items = ""
+        for (const key in answers) {
+            const displayedItem = selected[key] ? '(X) ' + answers[key] : '( ) ' + answers[key]
+            items += `[${parseInt(key) + 1}] ${displayedItem}\n`
+        }
+
+        console.log(returns + items)
+
+        console.log('Select your choices (press SPACE to validate)')
+
+        const key = readlineSync.keyIn('', { hideEchoBack: true, mask: '', limit: keyLimit });
+
+        if (key === ' ') { break }
+        else { selected[parseInt(key) - 1] = !selected[parseInt(key) - 1] }
+    }
+
+    console.log(selected)
+    return selected
+
+}
+

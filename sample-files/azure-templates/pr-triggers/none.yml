@@ -1,0 +1,6 @@
+#
+# PR trigger
+#
+# https://docs.microsoft.com/en-us/azure/devops/pipelines/build/triggers?view=vsts&tabs=yaml#pull-request-validation
+# PR do not trigger the build
+pr: none

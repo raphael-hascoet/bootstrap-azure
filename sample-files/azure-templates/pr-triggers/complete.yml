@@ -1,0 +1,18 @@
+#
+# PR trigger
+#
+# https://docs.microsoft.com/en-us/azure/devops/pipelines/build/triggers?view=vsts&tabs=yaml#pull-request-validation
+# Target branches master, develop, release(s)
+# Excludes docs/* and README.md 
+pr:
+  branches:
+    include:
+    - master
+    - develop
+    - release/*
+    - releases/*
+  paths:
+    exclude:
+    - README.md
+    - docs/*
+

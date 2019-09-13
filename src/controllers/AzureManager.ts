@@ -1,11 +1,12 @@
 import { AzureApi } from "../models/AzureApi";
 import { AzureLoginInfos, IAzureLoginInfos } from "../models/data/AzureLoginInfos";
+import { Preset } from '../models/data/Preset';
 import { Project } from "../models/data/Project";
 import getDefaultLoginsFromFile from "../utils/azureLoginFile";
-import { displayList, question, throwError, throwFatalError, YNquestion, selectQuestion } from "../utils/display";
-import { Preset } from '../models/data/Preset';
-import { GitManager } from './GitManager';
+import { displayList, question, selectQuestion, throwError, throwFatalError, YNquestion } from "../utils/display";
 import { copyFromSamples } from "../utils/samples";
+import { GitManager } from './GitManager';
+import { PipelineManager } from './PipelineManager';
 
 export class AzureManager {
 
@@ -108,13 +109,15 @@ export class AzureManager {
         console.log()
 
         if (YNquestion('Add a sample README ?')) {
-            await this.addSampleFile('README.md')
+            await copyFromSamples('README.md', this.gitManager.getTmpGitDir(), this.preset)
+            await this.gitManager.addAndPush('README.md')
         }
 
         console.log()
 
         if (YNquestion('Add a sample .gitignore ?')) {
-            await this.addSampleFile('.gitignore')
+            await copyFromSamples('.gitignore', this.gitManager.getTmpGitDir(), this.preset)
+            await this.gitManager.addAndPush('.gitignore')
         }
 
         console.log()
@@ -127,6 +130,10 @@ export class AzureManager {
                 await this.azureApi.setDefaultBranch(this.project as Project, 'develop')
                 console.log("develop is now the default branch")
             }
+        }
+
+        if (YNquestion('Do you want to setup a Continuous Integration pipeline ?')) {
+            await this.setupIntegrationPipeline()
         }
 
         console.log()
@@ -142,11 +149,36 @@ export class AzureManager {
         await this.gitManager.cloneRepo(repositoryUrl)
     }
 
-    private async addSampleFile(fileName: string) {
-        await copyFromSamples(fileName, this.gitManager.getTmpGitDir(), this.preset)
-        await this.gitManager.add(fileName)
-        await this.gitManager.commit('Added sample ' + fileName)
+
+    async setupIntegrationPipeline() {
+
+        const pipelineManager: PipelineManager = new PipelineManager(this.preset)
+
+        const compiledPipeline = await pipelineManager.generatePipeline()
+
+        await compiledPipeline.writeFilesInDestination(this.gitManager.getTmpGitDir())
+
+        for(const path of compiledPipeline.getFilePaths()) {
+            await this.gitManager.add(path)
+        }
+
+        await this.gitManager.commit('Added integration pipeline')
         await this.gitManager.push()
+    }
+
+    async setupPolicies(createdBranches: Array<string>) {
+
+        if (YNquestion('Check for linked work items on pull requests ?')) {
+            for (const branch of createdBranches)
+                this.azureApi.createPolicy(this.project as Project, true, true, 'work-items', branch)
+        }
+
+        if (YNquestion('Check for comments resolution on pull requests ?')) {
+            for (const branch of createdBranches)
+                this.azureApi.createPolicy(this.project as Project, true, true, 'active-comments', branch)
+        }
+
+
     }
 
     async editProject() {
@@ -172,21 +204,6 @@ export class AzureManager {
             console.log()
             await this.editProject()
         }
-    }
-
-    async setupPolicies(createdBranches: Array<string>) {
-
-        if (YNquestion('Check for linked work items on pull requests ?')) {
-            for (const branch of createdBranches)
-                this.azureApi.createPolicy(this.project as Project, true, true, 'work-items', branch)
-        }
-
-        if (YNquestion('Check for comments resolution on pull requests ?')) {
-            for (const branch of createdBranches)
-                this.azureApi.createPolicy(this.project as Project, true, true, 'active-comments', branch)
-        }
-
-
     }
 
 

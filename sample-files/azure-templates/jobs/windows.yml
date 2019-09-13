@@ -1,0 +1,10 @@
+# Windows job
+
+- job: Windows
+  pool:
+    vmImage: 'vs2017-win2016'
+  steps:
+  - script: echo 'Starting Windows job'
+  {{#each templates}}
+    - template: azure/templates/{{{this}}}.yml
+  {{/each}}

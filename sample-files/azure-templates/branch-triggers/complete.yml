@@ -1,0 +1,22 @@
+#
+# Branches trigger
+#
+# https://docs.microsoft.com/en-us/azure/devops/pipelines/build/triggers?view=vsts&tabs=yaml#continuous-integration-ci
+# Batch builds on master, develop, feature(s)/*, release(s)/*, bugfix and hotfix
+# Exludes docs/* and README.md
+trigger:
+  batch: true
+  branches:
+    include:
+    - master
+    - develop
+    - feature/*
+    - features/*
+    - release/*
+    - releases/*
+    - bugfix/*
+    - hotfix/*
+  paths:
+    exclude:
+    - README.md
+    - docs/*

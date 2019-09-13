@@ -66,6 +66,12 @@ export class GitManager {
         return remoteBranches.includes(name)
     }
 
+    async addAndPush(filePath: string) {
+        await this.add(filePath)
+        await this.commit('Added sample ' + filePath)
+        await this.push()
+    }
+
     async add(filePath: string) {
         await git.add({
             dir: this.tmpGitDir,

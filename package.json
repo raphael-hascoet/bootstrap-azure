@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "fs-extra": "^8.1.0",
+    "handlebars": "^4.2.0",
     "isomorphic-git": "^0.66.0",
     "node-fetch": "^2.6.0",
     "readline-sync": "^1.4.10",

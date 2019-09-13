@@ -1,0 +1,16 @@
+{{{branch-triggers}}}
+
+{{{pr-triggers}}}
+
+#
+# Jobs
+#
+# https://docs.microsoft.com/en-us/azure/devops/pipelines/process/phases?view=vsts&tabs=yaml
+
+jobs:
+
+{{#each jobs}}
+{{{this}}}
+
+
+{{/each}}
