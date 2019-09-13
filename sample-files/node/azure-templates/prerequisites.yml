@@ -1,0 +1,6 @@
+steps:
+# Install node version
+- task: NodeTool@0
+  inputs:
+    versionSpec: '10.x'
+  displayName: 'Install Node.js'

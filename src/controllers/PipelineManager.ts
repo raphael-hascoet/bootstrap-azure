@@ -38,12 +38,25 @@ export class PipelineManager {
 
         content.jobs = selectedJobs
 
+        const chosenTemplates = this.selectAzureTemplates()
+
+        content.templates = chosenTemplates
+
         compiledFiles.set('azure-pipelines.yml', await getCompiledTemplate(pipelineTemplate, await content.getTemplateContent()))
 
+        for (const templateName of chosenTemplates) {
+            compiledFiles.set(`azure/templates/${templateName}.yml`, await getTemplateFileContent(templateName, undefined, this.preset))
+        }
 
+        console.log(compiledFiles)
 
         return new CompiledPipeline(compiledFiles)
 
+    }
+
+    private selectAzureTemplates(): Array<string> {
+        const selectedStepsResult = selectMultipleQuestion('Which steps do you want to include ?', Object.values(AzureTemplates))
+        return Object.keys(AzureTemplates).filter((stepKey, index) => selectedStepsResult[index])
     }
 
 }
@@ -56,18 +69,25 @@ class PipelineContent {
 
     async getTemplateContent(): Promise<object> {
 
-        const jobsTemplates: Array<string> = await Promise.all(this.jobs.map((job) => getTemplateFileContent("jobs", job)))
+        const jobsTemplates: Array<string> = await Promise.all(this.jobs.map((job) => getTemplateFileContent(job, "jobs")))
 
         const jobsWithContent = await Promise.all(jobsTemplates.map((jobTemplate) => getCompiledTemplate(jobTemplate, { templates: this.templates })))
 
         let templateContent: any = {
-            "branch-triggers": await getTemplateFileContent("branch-triggers", this.branchTriggers),
-            "pr-triggers": await getTemplateFileContent("pr-triggers", this.prTriggers),
+            "branch-triggers": await getTemplateFileContent(this.branchTriggers, "branch-triggers"),
+            "pr-triggers": await getTemplateFileContent(this.prTriggers, "pr-triggers"),
             "jobs": jobsWithContent
         }
 
-        console.log("templateContent :", templateContent)
-
         return templateContent
     }
+}
+
+enum AzureTemplates {
+    "output-environment-variables" = "Output environment variables",
+    "prerequisites" = "Install prerequisites",
+    "build" = "Build the project",
+    // "unit-tests" = "Pass unit tests",
+    // "static-analysis" = "Pass static analysis",
+    "publish-build-artifacts" = "Publish build artifacts"
 }

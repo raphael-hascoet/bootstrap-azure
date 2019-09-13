@@ -26,13 +26,13 @@ export async function getSamplePath(fileName: string, preset?: Preset) {
 
 }
 
-export async function copyFromSamples(fileName: string, destination: string, preset: Preset, ) {
+export async function copyFromSamples(fileName: string, destination: string, preset: Preset) {
     await fs.copyFile(
         await getSamplePath(fileName, preset),
         destination + fileName
     )
 }
 
-export async function getSampleContent(fileName: string): Promise<string> {
-    return await fs.readFile(await getSamplePath(fileName), 'utf-8')
+export async function getSampleContent(fileName: string, preset?: Preset): Promise<string> {
+    return await fs.readFile(await getSamplePath(fileName, preset), 'utf-8')
 }

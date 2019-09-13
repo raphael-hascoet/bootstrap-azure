@@ -1,0 +1,2 @@
+steps:
+  - script: echo 'No known build steps'

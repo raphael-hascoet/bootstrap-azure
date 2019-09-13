@@ -1,0 +1,5 @@
+steps:
+# Build script
+- script: |
+   npm install
+  displayName: 'Npm install'
