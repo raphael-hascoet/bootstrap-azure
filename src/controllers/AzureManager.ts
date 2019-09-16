@@ -2,7 +2,7 @@ import { AzureApi } from "../models/AzureApi";
 import { AzureLoginInfos, IAzureLoginInfos } from "../models/data/AzureLoginInfos";
 import { Preset } from '../models/data/Preset';
 import { Project } from "../models/data/Project";
-import getDefaultLoginsFromFile from "../utils/azureLoginFile";
+import { getDefaultLoginsFromFile } from "../utils/config-files";
 import { displayList, question, selectQuestion, throwError, throwFatalError, YNquestion } from "../utils/display";
 import { copyFromSamples } from "../utils/samples";
 import { GitManager } from './GitManager';
@@ -137,7 +137,11 @@ export class AzureManager {
 
         if (presetHasInitCommands(this.preset)) {
             if (YNquestion('Do you want to initialize a basic project ?')) {
-                const filesToAdd = await initializeProject(this.gitManager.getTmpGitDir(), this.preset)
+
+                const project = this.project as Project
+                const exposedVariables = new Map([["project-name", project.name]])
+
+                const filesToAdd = await initializeProject(this.gitManager.getTmpGitDir(), this.preset, exposedVariables)
 
                 for (const file of filesToAdd) {
                     this.gitManager.add(file)

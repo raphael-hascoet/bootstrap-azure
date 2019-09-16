@@ -1,5 +1,9 @@
 {
     "node": [
         "npm init -y"
+    ],
+
+    "angular": [
+        "ng new $project-name --interactive=false --directory=."
     ]
 }

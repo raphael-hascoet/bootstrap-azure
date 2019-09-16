@@ -1,0 +1,9 @@
+steps:
+# Build script
+- script: |
+   npm install
+  displayName: 'npm install'
+
+- script: |
+   ng build
+  displayName: 'ng build'
