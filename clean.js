@@ -1,11 +1,6 @@
 const fetch = require("node-fetch");
 
-
-const logins = {
-    "organization": "raphaelh77",
-    "username": "raphaelh77@yahoo.fr",
-    "token": "ayv55owbqpdacs3hg6qokm7egxhhu3es4ykuwvxgkrzivjskuhxa"
-}
+import logins from './azure-logins.json'
 
 main()
 
