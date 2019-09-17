@@ -1,6 +1,6 @@
 const fetch = require("node-fetch");
 
-import policyTypes from '../utils/policy-types.json';
+import policyTypes from '../resources/policy-types.json';
 
 import { AzureLoginInfos } from "./data/AzureLoginInfos";
 import { Project } from "./data/Project";

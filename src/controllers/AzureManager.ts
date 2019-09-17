@@ -181,7 +181,7 @@ export class AzureManager {
         await compiledPipeline.writeFilesInDestination(this.gitManager.getTmpGitDir())
 
         for (const step of compiledPipeline.getStepsWithVariables()) {
-            this.azureApi.createVariableGroup(this.project as Project, step, await getEnvVariablesFromConfig(step))
+            this.azureApi.createVariableGroup(this.project as Project, step, await getEnvVariablesFromConfig(step) as Map<string, any>)
         }
 
         for (const path of compiledPipeline.getFilePaths()) {

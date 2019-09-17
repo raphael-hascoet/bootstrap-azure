@@ -19,7 +19,6 @@ async function main() {
     })
 
     let projects = await response.json()
-    // console.log(projects.value)
     for (const project of projects.value) {
         console.log(project)
         let rep = await fetch(`https://dev.azure.com/raphaelh77/_apis/projects/${project.id}?api-version=5.1`, {

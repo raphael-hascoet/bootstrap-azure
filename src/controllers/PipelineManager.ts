@@ -101,14 +101,9 @@ export class PipelineManager {
     private async getCompiledAzureTemplate(templateName: string): Promise<string> {
         const templateFileContent = await getTemplateFileContent(templateName, undefined, this.preset)
 
-        const configsWithTemplateVariables = await getConfigsWithTemplateVariables()
+        const templateVariables = await getTemplateVariablesFromConfig(templateName)
 
-        if (configsWithTemplateVariables.includes(templateName)) {
-            const templateVariables = await getTemplateVariablesFromConfig(templateName)
-            return await getCompiledTemplate(templateFileContent, mapToObject(templateVariables))
-        }
-
-        return templateFileContent
+        return await getCompiledTemplate(templateFileContent, mapToObject(templateVariables))
     }
 
 }

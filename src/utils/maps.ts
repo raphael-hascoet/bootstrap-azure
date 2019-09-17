@@ -1,8 +1,10 @@
-export function mapToObject(map: Map<any, any>): any {
+export function mapToObject(map: Map<any, any> | null): any {
     const obj = {}
 
-    for (const key of Array.from(map.keys())) {
-        (obj as any)[key] = map.get(key)
+    if (!!map) {
+        for (const key of Array.from(map.keys())) {
+            (obj as any)[key] = map.get(key)
+        }
     }
 
     return obj

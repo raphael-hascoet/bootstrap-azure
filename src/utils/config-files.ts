@@ -64,24 +64,36 @@ async function getConfigsWithKey(key: string): Promise<Array<string>> {
 
 }
 
-export async function getEnvVariablesFromConfig(type: string): Promise<Map<string, any>> {
+export async function getEnvVariablesFromConfig(type: string): Promise<Map<string, any> | null> {
 
     const envVariablesJson = await getFromConfig('env-variables', type)
+
+    if (envVariablesJson === null)
+        return null
 
     return new Map(Object.entries(envVariablesJson))
 
 }
 
-export async function getTemplateVariablesFromConfig(type: string): Promise<Map<string, any>> {
+export async function getTemplateVariablesFromConfig(type: string): Promise<Map<string, any> | null> {
 
-    const envVariablesJson = await getFromConfig('template-variables', type)
+    const templateVariablesJson = await getFromConfig('template-variables', type)
 
-    return new Map(Object.entries(envVariablesJson))
+    if (templateVariablesJson === null)
+        return null
+
+    return new Map(Object.entries(templateVariablesJson))
 
 }
 
 async function getFromConfig(key: string, type: string): Promise<any> {
     const config = await getConfig() as Map<string, any>
+
+    if (typeof config.get(type) === 'undefined')
+        return null
+
+    if (typeof config.get(type)[key] === 'undefined')
+        return null
 
     const configContent = config.get(type)[key]
 

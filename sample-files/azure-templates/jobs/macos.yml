@@ -4,7 +4,8 @@
   pool:
    vmImage: 'macOS-10.13'
   steps:
-  - script: echo 'Starting MacOS job'
   {{#each templates}}
   - template: azure/templates/{{{this}}}.yml
+  {{else}}
+  - script: echo 'Starting MacOS job'
   {{/each}}

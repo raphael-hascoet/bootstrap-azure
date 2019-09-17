@@ -4,7 +4,8 @@
   pool:
    vmImage: 'ubuntu-16.04'
   steps:
-  - script: echo 'Starting Linux job'
   {{#each templates}}
   - template: azure/templates/{{{this}}}.yml
+  {{else}}
+  - script: echo 'Starting Linux job'
   {{/each}}

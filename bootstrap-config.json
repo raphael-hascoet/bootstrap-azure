@@ -1,4 +1,7 @@
 {
+    "unit-tests": {
+
+    },
     "static-analysis": {
         "env-variables": {
             "SONARQUBE_API_AUTH_TOKEN": {

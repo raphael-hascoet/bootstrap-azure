@@ -1,0 +1,26 @@
+steps:
+# Run tests
+- script: |
+   {{#if test-script}}
+   {{{test-script}}}
+   {{/if}}
+   {{#unless test-script}}
+    npm run test
+   {{/unless}}
+  displayName: 'Npm run test'
+# Publish tests results
+- task: PublishTestResults@2
+  displayName: 'Publish test results'
+  inputs:
+    testResultsFiles: '$(System.DefaultWorkingDirectory)/test_results/junit.xml'
+    testRunTitle: 'Test results'
+# Publish Code Coverage Results
+# Publish Cobertura or JaCoCo code coverage results from a build
+- task: PublishCodeCoverageResults@1
+  displayName: 'Publish coverage results'
+  inputs: 
+    codeCoverageTool: Cobertura
+    summaryFileLocation: '$(System.DefaultWorkingDirectory)/test_results/coverage/cobertura-coverage.xml'
+    reportDirectory: '$(System.DefaultWorkingDirectory)/test_results/coverage'
+  #additionalCodeCoverageFiles: # Optional
+  #failIfCoverageEmpty: false # Optional

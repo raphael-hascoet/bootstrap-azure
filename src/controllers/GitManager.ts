@@ -3,7 +3,7 @@ const fs = require('fs');
 git.plugins.set('fs', fs)
 const tmp = require('tmp-promise')
 
-const gitDir = '/tmp-git/'
+const gitDir = '/bootstrap-azure/'
 
 // Manages all Git operations needed in the app
 // The repository is cloned in a temporary folder kept only during the runtime
