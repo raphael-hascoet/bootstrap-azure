@@ -1,6 +1,4 @@
 import { IAzureLoginInfos } from '../models/data/AzureLoginInfos';
-const fs = require('fs-extra');
-
 import { AzureLoginInfos } from "../models/data/AzureLoginInfos";
 import { readConfigFile } from './files';
 
@@ -17,20 +15,75 @@ export async function getDefaultLoginsFromFile(): Promise<AzureLoginInfos> {
     return new AzureLoginInfos(defaultLogins)
 }
 
-export async function getConfig(type: string): Promise<any> {
+async function getConfig(): Promise<Map<string, any> | null> {
     let configFileContent
 
     try {
-        configFileContent = await readConfigFile('./bootstrap-config')
+        configFileContent = await readConfigFile('./bootstrap-config.json')
     } catch (err) {
         console.log("Could not read config file.")
         return null
     }
 
-    if (configFileContent[type] === undefined) {
-        console.log(`The ${type} config is not set.`)
-        return null
+    const pipelineSteps: Map<string, any> = new Map(Object.entries(configFileContent))
+
+    return pipelineSteps
+}
+
+export async function configIsSet(type: string): Promise<boolean> {
+    const config = await getConfig()
+
+    if (config === null) {
+        return false
     }
 
-    return configFileContent[type]
+    return Array.from(config.keys()).includes(type)
+}
+
+export async function getConfigsWithEnvVariables(): Promise<Array<string>> {
+    return getConfigsWithKey('env-variables')
+}
+
+export async function getConfigsWithTemplateVariables(): Promise<Array<string>> {
+    return getConfigsWithKey('template-variables')
+}
+
+async function getConfigsWithKey(key: string): Promise<Array<string>> {
+
+    const config = await getConfig()
+
+    if (config === null) {
+        return []
+    }
+
+    const configsWithKey = Array.from(config.keys()).filter((configKey) => {
+        return key in config.get(configKey)
+    })
+
+    return configsWithKey
+
+}
+
+export async function getEnvVariablesFromConfig(type: string): Promise<Map<string, any>> {
+
+    const envVariablesJson = await getFromConfig('env-variables', type)
+
+    return new Map(Object.entries(envVariablesJson))
+
+}
+
+export async function getTemplateVariablesFromConfig(type: string): Promise<Map<string, any>> {
+
+    const envVariablesJson = await getFromConfig('template-variables', type)
+
+    return new Map(Object.entries(envVariablesJson))
+
+}
+
+async function getFromConfig(key: string, type: string): Promise<any> {
+    const config = await getConfig() as Map<string, any>
+
+    const configContent = config.get(type)[key]
+
+    return configContent
 }

@@ -1,0 +1,26 @@
+{
+    "output-environment-variables": {
+        "display": "Output environment variables",
+        "needsConfig": false
+    },
+    "prerequisites": {
+        "display": "Install prerequisites",
+        "needsConfig": false
+    },
+    "build": {
+        "display": "Build the project",
+        "needsConfig": false
+    },
+    "unit-tests": {
+        "display": "Pass unit tests",
+        "needsConfig": true
+    },
+    "static-analysis": {
+        "display": "Pass static analysis",
+        "needsConfig": true
+    },
+    "publish-build-artifacts": {
+        "display": "Publish build artifacts",
+        "needsConfig": false
+    }
+}

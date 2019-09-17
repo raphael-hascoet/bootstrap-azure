@@ -1,15 +1,8 @@
 import { AzureManager } from "./controllers/AzureManager";
-import { Preset } from './models/data/Preset';
 import { throwFatalError } from "./utils/display";
-import { presetHasInitCommands } from "./utils/project-init";
 export { }; // Required to override fetch
 
-
-process.on('SIGINT', function () {
-    console.log('\nI caught SIGINT signal.');
-    process.exit();
-});
-
+// The function is needed to use async/await syntax
 main()
 
 async function main() {

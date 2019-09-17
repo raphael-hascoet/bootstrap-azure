@@ -2,7 +2,7 @@ import { AzureApi } from "../models/AzureApi";
 import { AzureLoginInfos, IAzureLoginInfos } from "../models/data/AzureLoginInfos";
 import { Preset } from '../models/data/Preset';
 import { Project } from "../models/data/Project";
-import { getDefaultLoginsFromFile } from "../utils/config-files";
+import { getDefaultLoginsFromFile, getEnvVariablesFromConfig } from "../utils/config-files";
 import { displayList, question, selectQuestion, throwError, throwFatalError, YNquestion } from "../utils/display";
 import { copyFromSamples } from "../utils/samples";
 import { GitManager } from './GitManager';
@@ -179,6 +179,10 @@ export class AzureManager {
         const compiledPipeline = await pipelineManager.generatePipeline()
 
         await compiledPipeline.writeFilesInDestination(this.gitManager.getTmpGitDir())
+
+        for (const step of compiledPipeline.getStepsWithVariables()) {
+            this.azureApi.createVariableGroup(this.project as Project, step, await getEnvVariablesFromConfig(step))
+        }
 
         for (const path of compiledPipeline.getFilePaths()) {
             await this.gitManager.add(path)

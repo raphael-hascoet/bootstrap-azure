@@ -3,6 +3,7 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
+    "downlevelIteration": true,
     "target": "es5",
     "module": "commonjs",
     "strict": true,

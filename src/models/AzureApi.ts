@@ -4,6 +4,7 @@ import policyTypes from '../utils/policy-types.json';
 
 import { AzureLoginInfos } from "./data/AzureLoginInfos";
 import { Project } from "./data/Project";
+import { mapToObject } from '../utils/maps.js';
 
 
 export class AzureApi {
@@ -136,6 +137,31 @@ export class AzureApi {
 
             }
         )
+    }
+
+    async createVariableGroup(project: Project, name: string, variables: Map<string, any>) {
+
+        const variablesBody = mapToObject(variables)
+
+        const requestContent = {
+            "variables": variablesBody,
+            "type": "Vsts",
+            "name": name,
+            "description": name + " variable group"
+        }
+
+        let response = await fetch(`https://dev.azure.com/${this.loginInfos.organization}/${project.name}/_apis/distributedtask/variablegroups?api-version=5.1-preview.1`,
+            {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": this.loginInfos.getAuthentToken()
+                },
+                body: JSON.stringify(requestContent)
+
+            }
+        )
+
     }
 
     async createPolicy(project: Project, enabled: boolean, blocking: boolean, policy: string, branch: string, settings?: object) {

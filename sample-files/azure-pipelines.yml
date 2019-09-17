@@ -1,3 +1,10 @@
+{{#if variable-groups}}
+variables :
+{{#each variable-groups}}
+- group: {{{this}}}
+{{/each}}
+{{/if}}
+
 {{{branch-triggers}}}
 
 {{{pr-triggers}}}

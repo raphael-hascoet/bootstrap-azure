@@ -1,0 +1,25 @@
+{
+    "static-analysis": {
+        "env-variables": {
+            "SONARQUBE_API_AUTH_TOKEN": {
+                "value": "",
+                "isSecret": true
+            },
+            "SONARQUBE_API_HOST": {
+                "value": "https://sonarqube.liquidstudio-nantes.fr",
+                "isSecret": false
+            },
+            "SONARQUBE_AUTH_TOKEN": {
+                "value": "",
+                "isSecret": true
+            },
+            "SONARQUBE_PROJECT_LANGUAGES": {
+                "value": "js",
+                "isSecret": false
+            }
+        },
+        "template-variables": {
+            "service-connection": "SonarQube_AKS"
+        }
+    }
+}

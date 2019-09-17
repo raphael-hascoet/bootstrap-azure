@@ -1,0 +1,204 @@
+steps:
+# Need to generate project key, name and description for SonarQube
+- bash: |
+    sonarqubeProjectKey="${BUILD_REPOSITORY_NAME}"
+    sonarqubeProjectName="${sonarqubeProjectKey}"
+    sonarqubeProjectDescription="Build triggered for"
+    if [[ "${BUILD_REASON}" = "PullRequest" ]];
+    then
+        # Merge
+        sonarqubeProjectKey="${sonarqubeProjectKey}_PR_${SYSTEM_PULLREQUEST_PULLREQUESTID}"
+        sonarqubeProjectName="${sonarqubeProjectKey}"
+        sonarqubeProjectDescription="${sonarqubeProjectDescription} PR ${SYSTEM_PULLREQUEST_PULLREQUESTID} from ${SYSTEM_PULLREQUEST_SOURCEBRANCH} to ${SYSTEM_PULLREQUEST_TARGETBRANCH}"
+    else
+        # Other type
+        sonarqubeProjectKey="${sonarqubeProjectKey}_${BUILD_SOURCEBRANCHNAME}"
+        sonarqubeProjectName="${sonarqubeProjectKey}"
+        sonarqubeProjectDescription="${sonarqubeProjectDescription} ${BUILD_SOURCEBRANCH}"
+    fi
+
+    echo "##vso[task.setvariable variable=SONARQUBE_PROJECT_KEY]${sonarqubeProjectKey}"
+    echo "##vso[task.setvariable variable=SONARQUBE_PROJECT_NAME]${sonarqubeProjectName}"
+    echo "##vso[task.setvariable variable=SONARQUBE_PROJECT_DESCRIPTION]${sonarqubeProjectDescription}"
+  displayName: 'Generate SonarQube project key, name and description'
+# Download jq
+- bash: |
+    # Fixing jq version and arch or using default
+    # See http://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html
+    # See https://stedolan.github.io/jq/download/
+    : "${JQ_VERSION:=1.6}"
+    : "${JQ_ARCH:=win64.exe}" # linux32, linux64, osx-amd64, win32.exe, win64.exe, ...
+    # Download jq in build binaries directory
+    curl -s -Lo ${BUILD_BINARIESDIRECTORY}/jq https://github.com/stedolan/jq/releases/download/jq-${JQ_VERSION}/jq-${JQ_ARCH}
+    # Needs execution permission
+    chmod u+x ${BUILD_BINARIESDIRECTORY}/jq
+  displayName: 'Download jq'
+# Make jq available to PATH
+- powershell: Write-Host "##vso[task.setvariable variable=PATH;]${env:PATH};${env:BUILD_BINARIESDIRECTORY}";
+  displayName: 'Make jq available to PATH'
+# Create the SonarQube project, associate the quality profile and quality gate to project
+- bash: |
+    # Shell parameter expansion to set project reference name (will be used for quality profile name, gate and permission template)
+    # Default value is repository name if not set at pipeline level
+    : "${SONARQUBE_PROJECT_REFERENCE_NAME:=$BUILD_REPOSITORY_NAME}"
+    
+    echo "SonarQube project base name has been set to ${SONARQUBE_PROJECT_REFERENCE_NAME}"
+
+    # Create project
+    HTTP_STATUS=$(curl -X POST -s -u ${SONARQUBE_API_AUTH_TOKEN}: \
+        "${SONARQUBE_API_HOST}/api/projects/create" \
+        -d "project=${SONARQUBE_PROJECT_KEY}" \
+        -d "name=${SONARQUBE_PROJECT_NAME}" \
+        -d "visibility=private" \
+        -w " %{http_code}")
+
+    echo -n "Creation of Project ${SONARQUBE_PROJECT_NAME} : "
+
+    if [ "${HTTP_STATUS##* }" -eq 200 ] || [ "${HTTP_STATUS##* }" -eq 400 ];
+    then
+        if [ "${HTTP_STATUS##* }" -eq 200 ];
+        then
+            echo "OK"
+        else
+            echo "$(echo ${HTTP_STATUS% *} | jq -re '.errors[].msg')"
+        fi
+    else
+        echo "Error occurs during SonarQube POST to api/projects/create : ${HTTP_STATUS% *}"
+    fi
+
+    # Iterate over quality profiles languages
+    for i in ${SONARQUBE_PROJECT_LANGUAGES//,/ }
+    do
+        # Associate Quality Profile
+        HTTP_STATUS=$(curl -X POST -s -u ${SONARQUBE_API_AUTH_TOKEN}: \
+            "${SONARQUBE_API_HOST}/api/qualityprofiles/add_project" \
+            -d "project=${SONARQUBE_PROJECT_KEY}" \
+            -d "qualityProfile=${SONARQUBE_PROJECT_REFERENCE_NAME}" \
+            -d "language=${i}" \
+            -w " %{http_code}")
+
+        echo -n "Association of ${i} Quality Profile ${SONARQUBE_PROJECT_REFERENCE_NAME} to Project ${SONARQUBE_PROJECT_NAME} : "
+
+        if [ "${HTTP_STATUS##* }" -eq 204 ];
+        then
+            echo "OK"
+        else
+            echo "Error occurs during SonarQube POST to api/qualityprofiles/add_project : ${HTTP_STATUS% *}"
+            exit 1
+        fi
+    done
+
+    # Get the Quality Gate id
+    qualityGateId=$(curl -X GET -s -u ${SONARQUBE_API_AUTH_TOKEN}: \
+        "${SONARQUBE_API_HOST}/api/qualitygates/show?name=${SONARQUBE_PROJECT_REFERENCE_NAME}" \
+        | jq -re '.id')
+
+    echo -n "Retrieval of Quality Gate ${SONARQUBE_PROJECT_REFERENCE_NAME} : "
+
+    if [ ! -z "${qualityGateId}" ];
+    then
+        echo "OK"
+    else
+        echo "Error occurs during SonarQube GET from api/qualitygates/show?name=${SONARQUBE_PROJECT_REFERENCE_NAME}"
+        exit 1
+    fi
+
+    # Make the association between project and Quality Gate
+    HTTP_STATUS=$(curl -X POST -s -u ${SONARQUBE_API_AUTH_TOKEN}: \
+        "${SONARQUBE_API_HOST}/api/qualitygates/select" \
+        -d "projectKey=${SONARQUBE_PROJECT_KEY}" \
+        -d "gateId=${qualityGateId}" \
+        -w " %{http_code}")
+
+    echo -n "Association of Quality Gate ${SONARQUBE_PROJECT_REFERENCE_NAME} to Project ${SONARQUBE_PROJECT_NAME} : "
+
+    if [ "${HTTP_STATUS##* }" -eq 204 ];
+    then
+        echo "OK"
+    else
+        echo "Error occurs during SonarQube POST to api/qualitygates/select : ${HTTP_STATUS% *}"
+        exit 1
+    fi
+
+    # Look for the permission template id
+    templateId=$(curl -X GET -s -u ${SONARQUBE_API_AUTH_TOKEN}: \
+        "${SONARQUBE_API_HOST}/api/permissions/search_templates?q=${SONARQUBE_PROJECT_REFERENCE_NAME}" \
+        | jq -re '.permissionTemplates[].id')
+
+    echo -n "Retrieval of Template ${SONARQUBE_PROJECT_REFERENCE_NAME} : "
+
+    if [ ! -z "${templateId}" ];
+    then
+        echo "OK"
+    else
+        echo "Error occurs during SonarQube GET from api/permissions/search_templates?q=${SONARQUBE_PROJECT_REFERENCE_NAME}"
+        exit 1
+    fi
+
+    # Set the permission template to project
+    HTTP_STATUS=$(curl -X POST -s -u ${SONARQUBE_API_AUTH_TOKEN}: \
+        "${SONARQUBE_API_HOST}/api/permissions/apply_template" \
+        -d "projectKey=${SONARQUBE_PROJECT_KEY}" \
+        -d "templateId=${templateId}" \
+        -w " %{http_code}")
+
+    echo -n "Association of Template ${SONARQUBE_PROJECT_REFERENCE_NAME} to Project ${SONARQUBE_PROJECT_NAME} : "
+
+    if [ "${HTTP_STATUS##* }" -eq 204 ];
+    then
+        echo "OK"
+    else
+        echo "Error occurs during SonarQube POST to api/permissions/apply_template : ${HTTP_STATUS% *}"
+        exit 1
+    fi
+  env:
+    SONARQUBE_API_AUTH_TOKEN: $(SONARQUBE_API_AUTH_TOKEN)
+  displayName: 'Generate SonarQube project, set permission template, associate quality profile and gate'
+- task: SonarSource.sonarqube.15B84CA1-B62F-4A2A-A403-89B77A063157.SonarQubePrepare@4
+  displayName: 'Prepare analysis for $(System.TeamProject)_$(Build.SourceBranchName)'
+  inputs:
+    SonarQube: '{{{service-connection}}}'
+
+    scannerMode: CLI
+
+    configMode: manual
+
+#    cliProjectKey: '$(System.TeamProject)_$(Build.SourceBranchName)'
+    cliProjectKey: '$(SONARQUBE_PROJECT_KEY)'
+
+#    cliProjectName: '$(System.TeamProject)_$(Build.SourceBranchName)'
+    cliProjectName: '$(SONARQUBE_PROJECT_NAME)'
+
+    extraProperties: |
+     # Additional properties that will be passed to the scanner, 
+     # Put one key=value per line, example:
+     # sonar.exclusions=**/*.bin
+     #sonar.scm.provider=git
+     sonar.exclusions=**/azure-pipelines.yml, **/node_modules/**, **/test/**, **/reports/**, **/azure/**/*.yml, **/.eslintrc.js, **/public/**
+     sonar.test.inclusions=**/test/**
+     sonar.coverage.exclusions=**/static/**, **/reports/**, **/test/**, **/public/**
+     # Authentication Token generated through SonarQube (go to My Account > Security > Generate Tokens)
+     # https://docs.sonarqube.org/display/SONARqube71/Analysis+Parameters#AnalysisParameters-Authentication
+     sonar.login=$(SONARQUBE_AUTH_TOKEN)
+     sonar.password=
+     sonar.projectDescription=$(SONARQUBE_PROJECT_DESCRIPTION)
+     sonar.projectVersion=$(Build.BuildNumber)
+     sonar.sources=.
+     sonar.sourceEncoding=UTF-8
+     # Deprecated
+     #sonar.branch=
+     sonar.javascript.lcov.reportPaths=./test_results/coverage/lcov.info
+# Static analysis
+- task: SonarSource.sonarqube.6D01813A-9589-4B15-8491-8164AEB38055.SonarQubeAnalyze@4
+  displayName: 'Run code analysis'
+# Publish quality gate results
+- task: SonarSource.sonarqube.291ed61f-1ee4-45d3-b1b0-bf822d9095ef.SonarQubePublish@4
+  displayName: 'Publish quality gate results'
+# Deactivated due to the following unexplained error :
+#    "Retrieving analysisId from https://sonarqube.liquidstudio-nantes.fr/api/ce/task?id=AWyLXAyGQiDXekuU2msh
+#    ##[error]Unknown result from previous http request. The body is: [object Object]. Statuscode is 200"
+# Fail build on KO quality gate
+#- task: SimondeLang.sonar-buildbreaker.sonar-buildbreaker.sonar-buildbreaker@7
+#  displayName: 'Check quality gate results'
+#  inputs:
+#    SonarQube: 'SonarQube_AKS'

@@ -4,6 +4,12 @@ import { getCompiledTemplate, getTemplateFileContent } from '../utils/templates'
 import { Job } from './../models/data/Job';
 import { Preset } from './../models/data/Preset';
 import { CompiledPipeline } from '../models/data/CompiledPipeline';
+
+import pipelineStepsJson from '../resources/pipeline-steps.json'
+import { configIsSet, getConfigsWithEnvVariables, getTemplateVariablesFromConfig, getConfigsWithTemplateVariables } from '../utils/config-files';
+import { mapToObject } from '../utils/maps';
+
+const pipelineSteps: Map<string, PipelineStep> = new Map(Object.entries(pipelineStepsJson))
 export class PipelineManager {
 
     private preset: Preset;
@@ -38,40 +44,90 @@ export class PipelineManager {
 
         content.jobs = selectedJobs
 
-        const chosenTemplates = this.selectAzureTemplates()
+        const chosenAzureTemplates = await this.selectAzureTemplates()
 
-        content.templates = chosenTemplates
+        content.azureTemplates = chosenAzureTemplates
 
-        compiledFiles.set('azure-pipelines.yml', await getCompiledTemplate(pipelineTemplate, await content.getTemplateContent()))
+        compiledFiles.set('azure-pipelines.yml', await getCompiledTemplate(pipelineTemplate, await content.getPipelineTemplateContent()))
 
-        for (const templateName of chosenTemplates) {
-            compiledFiles.set(`azure/templates/${templateName}.yml`, await getTemplateFileContent(templateName, undefined, this.preset))
+        for (const templateName of chosenAzureTemplates) {
+            compiledFiles.set(`azure/templates/${templateName}.yml`, await this.getCompiledAzureTemplate(templateName))
         }
 
-        return new CompiledPipeline(compiledFiles)
+        return new CompiledPipeline(compiledFiles, await content.getVariableGroups())
 
     }
 
-    private selectAzureTemplates(): Array<string> {
-        const selectedStepsResult = selectMultipleQuestion('Which steps do you want to include ?', Object.values(AzureTemplates))
-        return Object.keys(AzureTemplates).filter((stepKey, index) => selectedStepsResult[index])
+    // This function loops if the user selects a step which needs a config and doesn't have one
+    private async selectAzureTemplates(): Promise<Array<string>> {
+        const pipelineStepsDisplay = Array.from(pipelineSteps.values()).map((pipelineStep) => {
+            return pipelineStep.needsConfig ? pipelineStep.display + " (needs config)" : pipelineStep.display
+        })
+
+        const chosenAzureTemplates = this.choosePipelineSteps(pipelineStepsDisplay)
+
+        const correctConfig = await this.verifyConfig(chosenAzureTemplates)
+
+        if (!correctConfig) return await this.selectAzureTemplates()
+
+        return chosenAzureTemplates
+    }
+
+    private choosePipelineSteps(steps: Array<string>): Array<string> {
+        const selectedStepsResult = selectMultipleQuestion('Which steps do you want to include ?', Object.values(steps))
+
+        const chosenPipelineSteps = Array.from(pipelineSteps.keys()).filter((stepKey, index) => selectedStepsResult[index])
+
+        return chosenPipelineSteps
+    }
+
+    // This function checks if the chosen steps which need a config do have one
+    private async verifyConfig(chosenAzureTemplates: Array<string>): Promise<boolean> {
+
+        for (const template of chosenAzureTemplates) {
+            const step = pipelineSteps.get(template) as PipelineStep
+            if (step.needsConfig) {
+                const hasConfig = await configIsSet(template)
+                if (!hasConfig) {
+                    console.log("The step " + template + " is not configured.")
+                    return false
+                }
+            }
+        }
+
+        return true
+    }
+
+    private async getCompiledAzureTemplate(templateName: string): Promise<string> {
+        const templateFileContent = await getTemplateFileContent(templateName, undefined, this.preset)
+
+        const configsWithTemplateVariables = await getConfigsWithTemplateVariables()
+
+        if (configsWithTemplateVariables.includes(templateName)) {
+            const templateVariables = await getTemplateVariablesFromConfig(templateName)
+            return await getCompiledTemplate(templateFileContent, mapToObject(templateVariables))
+        }
+
+        return templateFileContent
     }
 
 }
 
+// This class represents the content of the pipeline before being transformed into YAML
 class PipelineContent {
     branchTriggers: string = ""
     prTriggers: string = ""
     jobs: Array<string> = []
-    templates: Array<string> = []
+    azureTemplates: Array<string> = []
 
-    async getTemplateContent(): Promise<object> {
+    async getPipelineTemplateContent(): Promise<object> {
 
         const jobsTemplates: Array<string> = await Promise.all(this.jobs.map((job) => getTemplateFileContent(job, "jobs")))
 
-        const jobsWithContent = await Promise.all(jobsTemplates.map((jobTemplate) => getCompiledTemplate(jobTemplate, { templates: this.templates })))
+        const jobsWithContent = await Promise.all(jobsTemplates.map((jobTemplate) => getCompiledTemplate(jobTemplate, { templates: this.azureTemplates })))
 
         let templateContent: any = {
+            "variable-groups": await this.getVariableGroups(),
             "branch-triggers": await getTemplateFileContent(this.branchTriggers, "branch-triggers"),
             "pr-triggers": await getTemplateFileContent(this.prTriggers, "pr-triggers"),
             "jobs": jobsWithContent
@@ -79,13 +135,18 @@ class PipelineContent {
 
         return templateContent
     }
+
+    async getVariableGroups(): Promise<Array<string>> {
+        const configsWithEnvVariables = await getConfigsWithEnvVariables()
+
+        const envVariableGroupsToApply = this.azureTemplates.filter((template) => configsWithEnvVariables.includes(template))
+
+        return envVariableGroupsToApply
+    }
 }
 
-enum AzureTemplates {
-    "output-environment-variables" = "Output environment variables",
-    "prerequisites" = "Install prerequisites",
-    "build" = "Build the project",
-    // "unit-tests" = "Pass unit tests",
-    // "static-analysis" = "Pass static analysis",
-    "publish-build-artifacts" = "Publish build artifacts"
+
+interface PipelineStep {
+    display: string,
+    needsConfig: boolean
 }

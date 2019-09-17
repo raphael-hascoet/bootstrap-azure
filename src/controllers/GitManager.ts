@@ -5,6 +5,8 @@ const tmp = require('tmp-promise')
 
 const gitDir = '/tmp-git/'
 
+// Manages all Git operations needed in the app
+// The repository is cloned in a temporary folder kept only during the runtime
 export class GitManager {
 
     private username: string
