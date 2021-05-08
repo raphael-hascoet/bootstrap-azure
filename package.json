@@ -19,7 +19,7 @@
     "await-spawn": "^3.0.0",
     "fs-extra": "^8.1.0",
     "globby": "^10.0.1",
-    "handlebars": "^4.2.0",
+    "handlebars": "^4.7.7",
     "isomorphic-git": "^0.66.0",
     "node-fetch": "^2.6.0",
     "readline-sync": "^1.4.10",
