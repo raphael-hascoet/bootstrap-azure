@@ -20,7 +20,7 @@
     "fs-extra": "^8.1.0",
     "globby": "^10.0.1",
     "handlebars": "^4.2.0",
-    "isomorphic-git": "^0.66.0",
+    "isomorphic-git": "^1.8.2",
     "node-fetch": "^2.6.0",
     "readline-sync": "^1.4.10",
     "tmp-promise": "^2.0.2",
