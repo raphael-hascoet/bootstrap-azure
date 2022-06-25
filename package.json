@@ -21,7 +21,7 @@
     "globby": "^10.0.1",
     "handlebars": "^4.2.0",
     "isomorphic-git": "^0.66.0",
-    "node-fetch": "^2.6.0",
+    "node-fetch": "^2.6.7",
     "readline-sync": "^1.4.10",
     "tmp-promise": "^2.0.2",
     "tslint-config-airbnb": "^5.11.1"
